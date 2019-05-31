@@ -1,0 +1,9 @@
+python>=3.6.5
+torch==1.1
+torchvision>=0.3.0
+numpy>=1.15
+Pillow
+matplotlib>=3.0.3
+tb-nightly>= 1.14
+jupyter>=1.0.0
+notebook>=5.7.8
