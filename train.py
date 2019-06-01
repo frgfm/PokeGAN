@@ -116,21 +116,23 @@ def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n
             samples_z = G(fixed_z)
             G.train()  # back to training mode
             print_samples(samples_z, img_size=img_size)
-            plt.savefig(os.path.join('outputs', log_name, 'samples', f"stage{img_size}_epoch{starting_epoch + epoch + 1}.png"), transparent=True)
             plt.tight_layout()
+            plt.savefig(os.path.join('outputs', log_name, 'samples', f"stage{img_size}_epoch{starting_epoch + epoch + 1}.png"),
+                        transparent=True)
             plt.show()
             # Images
             # if tb_logger:
                 # x = torchvision.utils.make_grid(samples_z.clone().cpu(), normalize=True, scale_each=True)
                 # tb_logger.add_image('gen_images', x, current_iter)
                 # tb_logger.add_images('gen_images', samples_z.cpu().detach(), current_iter)
-            plt.figure(figsize=(12, 5))
+            plt.figure(figsize=(12, 7))
             plt.subplot(121)
             print_gradflow(D.named_parameters(), "Gradient flow Discriminator")
             plt.subplot(122)
             print_gradflow(G.named_parameters(), "Gradient flow Generator")
             plt.tight_layout()
-            plt.savefig(os.path.join('outputs', log_name, 'gradflow', f"stage{img_size}_epoch{starting_epoch + epoch + 1}.png"), transparent=True)
+            plt.savefig(os.path.join('outputs', log_name, 'gradflow', f"stage{img_size}_epoch{starting_epoch + epoch + 1}.png"),
+                        transparent=True)
             plt.show()
 
             # Save model states
