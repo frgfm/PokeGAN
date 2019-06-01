@@ -10,7 +10,7 @@ This repository is an ongoing implementation of shallow GAN architectures to gen
 
 ## Installation
 
-This project was developed in Python 3.7 with PyTorch 1.1. If you have a previous version of PyTorch, please consider to switch `torch.utils.tensorboard` dependency to [tensorboardX](https://github.com/lanpa/tensorboardX).
+This project was developed in Python 3.7 with PyTorch 1.1. If you have a previous version of PyTorch, please consider switching `torch.utils.tensorboard` dependency to [tensorboardX](https://github.com/lanpa/tensorboardX).
 
 ```bash
 git clone https://github.com/frgfm/PokeGAN.git
