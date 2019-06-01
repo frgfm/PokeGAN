@@ -13,16 +13,22 @@ class Flatten(nn.Module):
 
 
 def downsampler(in_channels, out_channels, kernel_size=3, stride=2, padding=1,
-                normalization_block=None, use_dropout=True):
+                norm_layer=None, norm_fn=None, activation=None, drop_rate=0):
+
+    if norm_layer is not None and norm_fn is not None:
+        raise AssertionError("Cannot apply normalization twice to conv layers.")
 
     layers_dict = OrderedDict()
     layers_dict['conv'] = nn.Conv2d(in_channels, out_channels, kernel_size,
                                     stride=stride, padding=padding, bias=False)
-    if normalization_block is not None:
-        layers_dict['norm'] = normalization_block(out_channels)
-    layers_dict['activation'] = nn.LeakyReLU(0.2)
-    if use_dropout:
-        layers_dict['dropout'] = nn.Dropout(0.3)
+    if norm_fn is not None:
+        layers_dict['conv'] = norm_fn(layers_dict['conv'])
+    if norm_layer is not None:
+        layers_dict['norm'] = norm_layer(out_channels)
+    if activation is not None:
+        layers_dict['activation'] = activation
+    if drop_rate > 0:
+        layers_dict['dropout'] = nn.Dropout(drop_rate)
 
     return nn.Sequential(layers_dict)
 
@@ -30,7 +36,7 @@ def downsampler(in_channels, out_channels, kernel_size=3, stride=2, padding=1,
 class Discriminator(nn.Module):
 
     def __init__(self, conv_channels, input_size=32, kernel_size=3, stride=2,
-                 normalization_block=None, use_dropout=True, init_weights=None):
+                 norm_layer=None, norm_fn=None, drop_rate=0, init_weights=None):
         """
         Initialize the Discriminator Module
         :param conv_dim: The depth of the first convolutional layer
@@ -48,8 +54,10 @@ class Discriminator(nn.Module):
             # Add layers
             layers_dict[f"layer_{layer_idx+1}"] = downsampler(conv_channels[layer_idx], out_channels, kernel_size,
                                                               stride=stride, padding=pad,
-                                                              normalization_block=normalization_block if layer_idx > 0 else None,
-                                                              use_dropout=use_dropout)
+                                                              norm_layer=norm_layer if layer_idx > 0 else None,
+                                                              norm_fn=norm_fn if layer_idx > 0 else None,
+                                                              activation=nn.LeakyReLU(0.2),
+                                                              drop_rate=drop_rate)
             # Update temp parameters
             current_size = current_size // stride
         self.downblock = nn.Sequential(layers_dict)
@@ -84,17 +92,22 @@ class Discriminator(nn.Module):
 
 
 def upsampler(in_channels, out_channels, kernel_size=3, stride=2, padding=1,
-              normalization_block=None, activation=None, use_dropout=True):
+              norm_layer=None, norm_fn=None, activation=None, drop_rate=0):
+
+    if norm_layer is not None and norm_fn is not None:
+        raise AssertionError("Cannot apply normalization twice to conv layers.")
 
     layers_dict = OrderedDict()
     layers_dict['tconv'] = nn.ConvTranspose2d(in_channels, out_channels, kernel_size,
                                               stride=stride, padding=padding, bias=False, output_padding=1)
-    if normalization_block is not None:
-        layers_dict['norm'] = normalization_block(out_channels)
+    if norm_fn is not None:
+        layers_dict['tconv'] = norm_fn(layers_dict['tconv'])
+    if norm_layer is not None:
+        layers_dict['norm'] = norm_layer(out_channels)
     if activation is not None:
         layers_dict['activation'] = activation
-    if use_dropout:
-        layers_dict['dropout'] = nn.Dropout(0.3)
+    if drop_rate > 0:
+        layers_dict['dropout'] = nn.Dropout(drop_rate)
 
     return nn.Sequential(layers_dict)
 
@@ -102,7 +115,7 @@ def upsampler(in_channels, out_channels, kernel_size=3, stride=2, padding=1,
 class Generator(nn.Module):
 
     def __init__(self, z_size, conv_channels, output_size=32, kernel_size=3, stride=2,
-                 normalization_block=None, use_dropout=True, init_weights=None):
+                 norm_layer=None, norm_fn=None, drop_rate=0, init_weights=None):
         """
         Initialize the Generator Module
         :param z_size: The length of the input latent vector, z
@@ -125,9 +138,10 @@ class Generator(nn.Module):
             # Add layers
             layers_dict[f"layer_{naming_idx}"] = upsampler(conv_channels[layer_idx], out_channels, kernel_size,
                                                            stride=stride, padding=pad,
-                                                           normalization_block=normalization_block if layer_idx + 1 < len(conv_channels) - 1 else None,
+                                                           norm_layer=norm_layer if layer_idx + 1 < len(conv_channels) - 1 else None,
+                                                           norm_fn=norm_fn if layer_idx + 1 < len(conv_channels) - 1 else None,
                                                            activation=nn.ReLU() if layer_idx + 1 < len(conv_channels) - 1 else nn.Tanh(),
-                                                           use_dropout=use_dropout and (layer_idx + 1 < len(conv_channels) - 1))
+                                                           drop_rate=drop_rate if (layer_idx + 1 < len(conv_channels) - 1) else 0)
             # Update temp parameters
             current_size *= stride
 
