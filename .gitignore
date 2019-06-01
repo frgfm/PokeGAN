@@ -106,3 +106,4 @@ venv.bak/
 # data  and log dirs
 data/
 logs/
+outputs/
