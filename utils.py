@@ -47,7 +47,8 @@ def print_gradflow(named_parameters, title=None, zoom=False):
             if n.split('.')[0] != 'fc' and len(n.split('.')) >= 3:
                 n_split = n.split('.')
                 layer_idx = n_split[-3].split('_')[-1]
-                layers.append(f"{n_split[-2]}_{layer_idx}.{n_split[-1]}")
+                n = f"{n_split[-2]}_{layer_idx}.{n_split[-1]}"
+            layers.append(n)
             ave_grads.append(p.grad.abs().mean())
             max_grads.append(p.grad.abs().max())
     plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
