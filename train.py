@@ -39,6 +39,7 @@ def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n
                 real_images = real_images.cuda()
 
             D_real = D(real_images)
+            # Smooth & swap labels
             labels = get_labels(D_real.size(0), True, swap_prob=0.03, noise_norm=0.1)
             # move labels to GPU if available     
             if train_on_gpu:
@@ -54,6 +55,7 @@ def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n
 
             # Compute the discriminator losses on fake images            
             D_fake = D(fake_images)
+            # Smooth & swap labels
             labels = get_labels(D_fake.size(0), False, swap_prob=0.03, noise_norm=0.1)
             # move labels to GPU if available     
             if train_on_gpu:
@@ -80,6 +82,7 @@ def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n
             # Compute the discriminator losses on fake images 
             # using flipped labels!
             D_fake = D(fake_images)
+            # Smooth & swap labels
             labels = get_labels(D_fake.size(0), True, swap_prob=0.03, noise_norm=0.1)
             # move labels to GPU if available     
             if train_on_gpu:
