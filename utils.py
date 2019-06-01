@@ -28,7 +28,7 @@ def print_samples(samples, title, img_size=32):
         ax.xaxis.set_visible(False)
         ax.yaxis.set_visible(False)
         im = ax.imshow(img.reshape((img_size, img_size, 3)))
-    plt.title(title)
+    plt.suptitle(title)
 
 
 def print_gradflow(named_parameters, title, zoom=False):
