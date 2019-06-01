@@ -114,7 +114,7 @@ def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n
             G.eval()  # for generating samples
             samples_z = G(fixed_z)
             G.train()  # back to training mode
-            print_samples(samples_z, title=f"Epoch {epoch+1}", img_size=img_size)
+            print_samples(samples_z, title=f"Stage {img_size}x{img_size} - Epoch {starting_epoch + epoch + 1}", img_size=img_size)
             plt.show()
             # Images
             # if tb_logger:
