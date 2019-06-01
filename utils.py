@@ -19,7 +19,7 @@ def convert_to_png(origin_folder, dest_folder):
 
 
 # helper function for viewing a list of passed in sample images
-def print_samples(samples, title, img_size=32):
+def print_samples(samples, title=None, img_size=32):
     fig, axes = plt.subplots(figsize=(16,4), nrows=2, ncols=8, sharey=True, sharex=True)
     for ax, img in zip(axes.flatten(), samples):
         img = img.detach().cpu().detach().numpy()
@@ -28,10 +28,11 @@ def print_samples(samples, title, img_size=32):
         ax.xaxis.set_visible(False)
         ax.yaxis.set_visible(False)
         im = ax.imshow(img.reshape((img_size, img_size, 3)))
-    plt.suptitle(title)
+    if isinstance(title, str):
+        plt.suptitle(title)
 
 
-def print_gradflow(named_parameters, title, zoom=False):
+def print_gradflow(named_parameters, title=None, zoom=False):
     '''Plots the gradients flowing through different layers in the net during training.
     Can be used for checking for possible gradient vanishing / exploding problems.
     
@@ -42,7 +43,11 @@ def print_gradflow(named_parameters, title, zoom=False):
     layers = []
     for n, p in named_parameters:
         if(p.requires_grad) and ("bias" not in n):
-            layers.append(n)
+            # Shorten the layer name
+            if n.split('.')[0] != 'fc' and len(n.split('.')) >= 3:
+                n_split = n.split('.')
+                layer_idx = n_split[-3].split('_')[-1]
+                layers.append(f"{n_split[-2]}_{layer_idx}.{n_split[-1]}")
             ave_grads.append(p.grad.abs().mean())
             max_grads.append(p.grad.abs().max())
     plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
@@ -54,7 +59,8 @@ def print_gradflow(named_parameters, title, zoom=False):
         plt.ylim(bottom=-0.001, top=0.02) # zoom in on the lower gradient regions
     plt.xlabel("Layers")
     plt.ylabel("Gradient value")
-    plt.title(title)
+    if isinstance(title, str):
+        plt.title(title)
     plt.grid(True)
     plt.legend([Line2D([0], [0], color="c", lw=4),
                 Line2D([0], [0], color="b", lw=4),

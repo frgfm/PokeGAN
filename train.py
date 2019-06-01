@@ -1,3 +1,4 @@
+import os
 import torch
 import numpy as np
 from preprocessing import scale
@@ -7,7 +8,7 @@ import matplotlib.pyplot as plt
 
 
 def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n_epochs, train_on_gpu=True,
-                tb_logger=None, log_every=10, sample_print_freq=100, starting_epoch=0):
+              tb_logger=None, log_name='losses', log_every=10, sample_print_freq=100, starting_epoch=0):
     '''Trains adversarial networks for some number of epochs
        param, D: the discriminator network
        param, G: the generator network
@@ -94,7 +95,7 @@ def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n
         info = dict(d_loss=d_loss.item(), g_loss=g_loss.item())
         current_iter = (starting_epoch + epoch) * len(data_loader) + batch_i
         if tb_logger is not None:
-            tb_logger.add_scalars("losses", info, current_iter)
+            tb_logger.add_scalars(log_name, info, current_iter)
             # for name, param in D.named_parameters():
             #     if param.requires_grad and "bias" not in name:
             #         tb_logger.add_histogram(f"D.layer{name}", param.clone().cpu().data.numpy(), current_iter)
@@ -114,7 +115,9 @@ def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n
             G.eval()  # for generating samples
             samples_z = G(fixed_z)
             G.train()  # back to training mode
-            print_samples(samples_z, title=f"Stage {img_size}x{img_size} - Epoch {starting_epoch + epoch + 1}", img_size=img_size)
+            print_samples(samples_z, img_size=img_size)
+            plt.savefig(os.path.join('outputs', log_name, 'samples', f"stage{img_size}_epoch{starting_epoch + epoch + 1}.png"), transparent=True)
+            plt.tight_layout()
             plt.show()
             # Images
             # if tb_logger:
@@ -123,10 +126,16 @@ def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n
                 # tb_logger.add_images('gen_images', samples_z.cpu().detach(), current_iter)
             plt.figure(figsize=(12, 5))
             plt.subplot(121)
-            print_gradflow(D.named_parameters(), f"Gradient flow Discriminator")
+            print_gradflow(D.named_parameters(), "Gradient flow Discriminator")
             plt.subplot(122)
-            print_gradflow(G.named_parameters(), f"Gradient flow Generator")
+            print_gradflow(G.named_parameters(), "Gradient flow Generator")
+            plt.tight_layout()
+            plt.savefig(os.path.join('outputs', log_name, 'gradflow', f"stage{img_size}_epoch{starting_epoch + epoch + 1}.png"), transparent=True)
             plt.show()
+
+            # Save model states
+            torch.save(D.state_dict(), os.path.join('outputs', log_name, 'model_states', f"D_stage{img_size}_epoch{starting_epoch + epoch + 1}.pth"))
+            torch.save(G.state_dict(), os.path.join('outputs', log_name, 'model_states', f"G_stage{img_size}_epoch{starting_epoch + epoch + 1}.pth"))
 
 
 def train_ProGAN():
