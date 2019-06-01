@@ -60,13 +60,13 @@ class Discriminator(nn.Module):
         if init_weights is not None:
             self.apply(init_weights)
 
-    def freeze_layers(self, nb_layers=None):
+    def freeze_layers(self, nb_layers=0):
 
         for name, param in self.named_parameters():
             # focus on downsampling blocks
-            if name.split('.')[0].split('_')[0] == 'downblock':
+            if name.split('.')[0] == 'downblock':
                 # freeze all nb_layers first layers
-                if int(name.split('.')[1].split('_')[-1]) < nb_layers:
+                if int(name.split('.')[1].split('_')[-1]) <= nb_layers:
                     param.requires_grad = False
 
     def forward(self, x):
@@ -137,13 +137,13 @@ class Generator(nn.Module):
         if init_weights is not None:
             self.apply(init_weights)
 
-    def freeze_layers(self, nb_layers=None):
+    def freeze_layers(self, nb_layers=0):
 
         for name, param in self.named_parameters():
             # focus on upsampling blocks
-            if name.split('.')[0].split('_')[0] == 'upblock':
+            if name.split('.')[0] == 'upblock':
                 # freeze all nb_layers first layers
-                if int(name.split('.')[1].split('_')[-1]) < nb_layers:
+                if int(name.split('.')[1].split('_')[-1]) <= nb_layers:
                     param.requires_grad = False
 
     def forward(self, x):
