@@ -4,6 +4,10 @@ This repository is an ongoing implementation of shallow GAN architectures to gen
 
 
 
+![all_samples](static/images/all_samples.gif)
+
+
+
 ## Installation
 
 This project was developed in Python 3.7 with PyTorch 1.1. If you have a previous version of PyTorch, please consider to switch `torch.utils.tensorboard` dependency to [tensorboardX](https://github.com/lanpa/tensorboardX).
@@ -75,6 +79,10 @@ Tried InstanceNorm rather than BatchNorm but the latter proved to be more effect
 
 ### Training scheme
 
+![progan_scheme](static/images/progan_scheme.png)
+
+*Source: Progressive Growing of GANs for improved quality, stability, and variation, ICLR 2018*
+
 Using the idea suggested by ProGAN, the implementation include a progressive training scheme:
 
 - We select a target image size and a starting size
@@ -96,6 +104,30 @@ Samples
 Gradient flow
 
 ![stage1_gradflow](static/images/gradflow_stage1.png)
+
+#### Stage 2 (32x32 images)
+
+Samples
+
+![stage2_samples](static/images/pokemon_stage2.png)
+
+Gradient flow
+
+![stage2_gradflow](static/images/gradflow_stage2.png)
+
+#### Stage 3 (64x64 images)
+
+Samples
+
+![stage3_samples](static/images/pokemon_stage3.png)
+
+Gradient flow
+
+![stage3_gradflow](static/images/gradflow_stage3.png)
+
+
+
+
 
 
 
