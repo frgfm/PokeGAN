@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 
 def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n_epochs, train_on_gpu=True,
-              tb_logger=None, log_name='losses', log_every=10, sample_print_freq=100, starting_epoch=0):
+              tb_logger=None, log_every=10, output_folder='training', sample_print_freq=100, starting_epoch=0):
     '''Trains adversarial networks for some number of epochs
        param, D: the discriminator network
        param, G: the generator network
@@ -120,7 +120,7 @@ def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n
             G.train()  # back to training mode
             print_samples(samples_z, img_size=img_size)
             plt.tight_layout()
-            plt.savefig(os.path.join('outputs', log_name, 'samples', f"stage{img_size}_epoch{starting_epoch + epoch + 1}.png"),
+            plt.savefig(os.path.join(output_folder, 'samples', f"stage{img_size}_epoch{starting_epoch + epoch + 1}.png"),
                         transparent=True)
             plt.show()
             # Images
@@ -134,13 +134,13 @@ def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n
             plt.subplot(122)
             print_gradflow(G.named_parameters(), "Gradient flow Generator")
             plt.tight_layout()
-            plt.savefig(os.path.join('outputs', log_name, 'gradflow', f"stage{img_size}_epoch{starting_epoch + epoch + 1}.png"),
+            plt.savefig(os.path.join(output_folder, 'gradflow', f"stage{img_size}_epoch{starting_epoch + epoch + 1}.png"),
                         transparent=True)
             plt.show()
 
             # Save model states
-            torch.save(D.state_dict(), os.path.join('outputs', log_name, 'model_states', f"D_stage{img_size}_epoch{starting_epoch + epoch + 1}.pth"))
-            torch.save(G.state_dict(), os.path.join('outputs', log_name, 'model_states', f"G_stage{img_size}_epoch{starting_epoch + epoch + 1}.pth"))
+            torch.save(D.state_dict(), os.path.join(output_folder, 'model_states', f"D_stage{img_size}_epoch{starting_epoch + epoch + 1}.pth"))
+            torch.save(G.state_dict(), os.path.join(output_folder, 'model_states', f"G_stage{img_size}_epoch{starting_epoch + epoch + 1}.pth"))
 
 
 def train_ProGAN():
