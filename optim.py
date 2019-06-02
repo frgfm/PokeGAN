@@ -2,7 +2,8 @@ import torch
 import numpy as np
 
 
-def get_labels(batch_size, real_label=True, swap_prob=0.03, noise_norm=0.1):
+
+def get_labels(batch_size, real_label=True, swap_prob=0.03, noise_norm=0.1, train_on_gpu=True):
 
     # Label smoothing
     if real_label:
@@ -15,6 +16,9 @@ def get_labels(batch_size, real_label=True, swap_prob=0.03, noise_norm=0.1):
     swap_idxs = np.argwhere(distrib < swap_prob).flatten()
     labels[swap_idxs] = float(not real_label)
     labels = torch.from_numpy(labels).float()
+
+    if train_on_gpu:
+        labels = labels.cuda()
 
     return labels
 
