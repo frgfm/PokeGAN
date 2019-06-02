@@ -93,6 +93,21 @@ Using the idea suggested by ProGAN, the implementation include a progressive tra
 
 
 
+## Experiments
+
+Things that were tested to improve training:
+
+- **Normalization**: batch normalization, instance normalization, local response normalization, layer normalization, spectral normalization.
+- **Kernel size**: raising the generator kernel size from 3x3 to 5x5 to get smoother results.
+- **Learning rate**: scaling down the learning rate by a factor (<= 1) for the generator leads to easier convergence towards a local Nash Equilibrium.
+- **GAN loss**: standard loss, relativistic loss, relativistic average loss
+
+And other tricks to be implemented soon:
+
+- Gradient penalty & consistency term
+
+
+
 ## Results
 
 #### Stage 1 (16x16 images)
@@ -117,7 +132,7 @@ Gradient flow
 
 #### Stage 3 (64x64 images)
 
-Samples
+Samples (mode collapse)
 
 ![stage3_samples](static/images/pokemon_stage3.png)
 
@@ -147,3 +162,8 @@ Example:
 
 - DCGAN: [paper](https://arxiv.org/abs/1511.06434)
 - ProGAN: [paper](https://arxiv.org/abs/1710.10196)
+- Two Time-Scale Update Rule: [paper](https://arxiv.org/abs/1706.08500)
+- Gradient penalty: [paper](https://arxiv.org/abs/1704.00028) ([implementation](https://github.com/EmilienDupont/wgan-gp))
+- Consistency term: [paper](https://arxiv.org/abs/1803.01541) ([implementation](https://github.com/pYtoner/CT-GAN))
+- Spectral normalization: [paper](https://arxiv.org/abs/1802.05957) ([implementation](https://pytorch.org/docs/stable/_modules/torch/nn/utils/spectral_norm.html))
+- RaGAN: [paper](https://arxiv.org/abs/1807.00734)
