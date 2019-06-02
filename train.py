@@ -130,9 +130,9 @@ def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n
                 # tb_logger.add_images('gen_images', samples_z.cpu().detach(), current_iter)
             plt.figure(figsize=(12, 7))
             plt.subplot(121)
-            print_gradflow(D.named_parameters(), "Gradient flow Discriminator")
+            print_gradflow(D.named_parameters(), "Discriminator gradient flow")
             plt.subplot(122)
-            print_gradflow(G.named_parameters(), "Gradient flow Generator")
+            print_gradflow(G.named_parameters(), "Generator gradient flow")
             plt.tight_layout()
             plt.savefig(os.path.join(output_folder, 'gradflow', f"stage{img_size}_epoch{starting_epoch + epoch + 1}.png"),
                         transparent=True)
