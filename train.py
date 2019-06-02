@@ -11,7 +11,7 @@ from optim import get_labels, get_noise, get_discriminator_loss, get_generator_l
 from utils import print_samples, print_gradflow
 
 
-def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n_epochs, train_on_gpu=True, loss_type='sgan',
+def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, n_epochs, train_on_gpu=True, loss_type='sgan',
               tb_logger=None, log_every=10, output_folder='training', sample_print_freq=100, starting_epoch=0):
     '''Trains adversarial networks for some number of epochs
        param, D: the discriminator network
@@ -52,7 +52,7 @@ def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n
             D_fake = D(G(z)).detach().squeeze()
 
             # Compute loss
-            d_loss = get_discriminator_loss(D_real, D_fake, criterion, real_target, fake_target, loss_type=loss_type)
+            d_loss = get_discriminator_loss(D_real, D_fake, real_target, fake_target, loss_type=loss_type)
 
             # Backprop
             d_loss.backward()
@@ -71,7 +71,7 @@ def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n
             D_fake = D(G(z)).squeeze()
 
             # Compute loss
-            g_loss = get_generator_loss(D_fake, criterion, real_target, D_real, loss_type=loss_type)
+            g_loss = get_generator_loss(D_fake, real_target, D_real, loss_type=loss_type)
 
             # Backprop
             g_loss.backward()
@@ -136,7 +136,7 @@ def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n
 def train_ProGAN(min_scale, max_scale, lr_cycles,
                  batch_size, data_dir,
                  latent_feature_size, d_dict, g_dict,
-                 train_on_gpu, g_lr_scaling_factor, betas, loss_type, criterion,
+                 train_on_gpu, g_lr_scaling_factor, betas, loss_type,
                  sample_size, logger, output_folder):
 
     nb_stages = int(np.log2(max_scale / min_scale)) + 1
@@ -197,7 +197,7 @@ def train_ProGAN(min_scale, max_scale, lr_cycles,
             d_optimizer = optim.Adam(D.parameters(), cycle_settings.get('lr'), betas)
             g_optimizer = optim.Adam(G.parameters(), g_lr_scaling_factor * cycle_settings.get('lr'), betas)
             train_GAN(D, d_optimizer, G, g_optimizer, poke_loader, fixed_z,
-                      criterion, cycle_settings.get('nb_epochs'), train_on_gpu,
+                      cycle_settings.get('nb_epochs'), train_on_gpu,
                       loss_type, logger, log_every=10, output_folder=output_folder,
                       sample_print_freq=100, starting_epoch=tot_epochs)
             tot_epochs += cycle_settings.get('nb_epochs')

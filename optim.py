@@ -1,4 +1,5 @@
 import torch
+from torch.nn import BCEWithLogitsLoss
 import numpy as np
 
 IMPLEMENTED_LOSSES = ['sgan', 'rgan', 'ragan']
@@ -57,19 +58,24 @@ def normal_initialization(m, mean=0, std=0.2):
         torch.nn.init.normal_(m.weight.data, mean, std)
 
 
-def get_discriminator_loss(real_pred, fake_pred, criterion, real_target,
+def get_discriminator_loss(real_pred, fake_pred, real_target,
                            fake_target=None, loss_type='sgan'):
 
     if loss_type not in IMPLEMENTED_LOSSES:
         raise NotImplementedError(f"Loss type should be in {IMPLEMENTED_LOSSES}")
 
     if loss_type == 'sgan':
-        loss = criterion(real_pred, real_target) + criterion(fake_pred, fake_target)
+        adversarial_loss = BCEWithLogitsLoss()
+        loss = 0.5 * (adversarial_loss(real_pred, real_target) +
+                      adversarial_loss(fake_pred, fake_target))
     elif loss_type == 'rgan':
-        loss = criterion(real_pred - fake_pred, real_target)
+        adversarial_loss = BCEWithLogitsLoss()
+        loss = 0.5 * (adversarial_loss(real_pred - fake_pred, real_target) +
+                      adversarial_loss(fake_pred - real_pred, fake_target))
     elif loss_type == 'ragan':
-        loss = (torch.mean((real_pred - torch.mean(fake_pred) - real_target) ** 2) +
-                torch.mean((fake_pred - torch.mean(real_pred) + real_target) ** 2)) / 2
+        adversarial_loss = BCEWithLogitsLoss()
+        loss = 0.5 * (adversarial_loss(real_pred - fake_pred.mean(), real_target) +
+                      adversarial_loss(fake_pred - real_pred.mean(), fake_target))
 
     return loss
 
@@ -80,11 +86,13 @@ def get_generator_loss(fake_pred, criterion, real_target, real_pred=None, loss_t
         raise NotImplementedError(f"Loss type should be in {IMPLEMENTED_LOSSES}")
 
     if loss_type == 'sgan':
-        loss = criterion(fake_pred, real_target)
+        adversarial_loss = BCEWithLogitsLoss()
+        loss = adversarial_loss(fake_pred, real_target)
     elif loss_type == 'rgan':
-        loss = criterion(fake_pred - real_pred, real_target)
+        adversarial_loss = BCEWithLogitsLoss()
+        loss = adversarial_loss(fake_pred - real_pred, real_target)
     elif loss_type == 'ragan':
-        loss = (torch.mean((real_pred - torch.mean(fake_pred) + real_target) ** 2) +
-                torch.mean((fake_pred - torch.mean(real_pred) - real_target) ** 2)) / 2
+        adversarial_loss = BCEWithLogitsLoss()
+        loss = adversarial_loss(fake_pred - real_pred.mean(), real_target)
 
     return loss
