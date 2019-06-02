@@ -15,10 +15,9 @@ def convert_to_png(origin_folder, dest_folder):
         img = Image.open(file)
         jpg = img.convert('RGB')
         # print(file)
-        jpg.save(os.path.join(dest_folder, f"{file.split('/')[-1].split('.')[0]}.jpg")) 
+        jpg.save(os.path.join(dest_folder, f"{file.split('/')[-1].split('.')[0]}.jpg"))
 
 
-# helper function for viewing a list of passed in sample images
 def print_samples(samples, title=None, img_size=32):
     fig, axes = plt.subplots(figsize=(16,4), nrows=2, ncols=8, sharey=True, sharex=True)
     for ax, img in zip(axes.flatten(), samples):
