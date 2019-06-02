@@ -2,9 +2,11 @@ import os
 import torch
 import numpy as np
 from preprocessing import scale
-from optim import get_labels, get_noise
-from utils import print_samples, print_gradflow
 import matplotlib.pyplot as plt
+import torchvision
+
+from optim import get_labels, get_noise, get_discriminator_loss, get_generator_loss
+from utils import print_samples, print_gradflow
 
 
 def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n_epochs, train_on_gpu=True,
@@ -26,45 +28,31 @@ def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n
 
             batch_size = real_images.size(0)
             real_images = scale(real_images)
+            # Move images to GPU
+            if train_on_gpu:
+                real_images = real_images.cuda()
             img_size = real_images.size(-1)
+
+            # Targets (smooth & swap labels)
+            real_target = get_labels(batch_size, True, swap_prob=0.03, noise_norm=0.1, train_on_gpu=train_on_gpu)
+            fake_target = get_labels(batch_size, False, swap_prob=0.03, noise_norm=0.1, train_on_gpu=train_on_gpu)
 
             ########################
             # DISCRIMINATOR TRAINING
             ########################
-            # 1. Train the discriminator on real and fake images
+
             d_optimizer.zero_grad()
 
-            # Compute the discriminator losses on real images 
-            if train_on_gpu:
-                real_images = real_images.cuda()
-
-            D_real = D(real_images)
-            # Smooth & swap labels
-            labels = get_labels(D_real.size(0), True, swap_prob=0.03, noise_norm=0.1)
-            # move labels to GPU if available     
-            if train_on_gpu:
-                labels = labels.cuda()
-            # calculate loss
-            d_real_loss = criterion(D_real.squeeze(), labels)
-
-            # 2. Train with fake images
-
+            # Get discrimminator output for real and fake images
+            D_real = D(real_images).squeeze()
             # Generate fake images
-            z = get_noise((batch_size, fixed_z.size(1)))
-            fake_images = G(z)
+            z = get_noise((batch_size, fixed_z.size(1)), train_on_gpu)
+            D_fake = D(G(z)).squeeze()
 
-            # Compute the discriminator losses on fake images            
-            D_fake = D(fake_images)
-            # Smooth & swap labels
-            labels = get_labels(D_fake.size(0), False, swap_prob=0.03, noise_norm=0.1)
-            # move labels to GPU if available     
-            if train_on_gpu:
-                labels = labels.cuda()
-            # calculate loss
-            d_fake_loss = criterion(D_fake.squeeze(), labels)
+            # Compute loss
+            d_loss = get_discriminator_loss(D_real, D_fake, criterion, real_target, fake_target, loss_type=loss_type)
 
-            # add up loss and perform backprop
-            d_loss = d_real_loss + d_fake_loss
+            # Backprop
             d_loss.backward()
             d_optimizer.step()
 
@@ -72,62 +60,63 @@ def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n
             # GENERATOR TRAINING
             ########################
 
-            # 2. Train the generator with an adversarial loss
             g_optimizer.zero_grad()
 
-            # Generate fake images
-            z = get_noise((batch_size, fixed_z.size(1)))
-            fake_images = G(z)
+            # Resample target
+            real_target = get_labels(batch_size, True, swap_prob=0.03, noise_norm=0.1, train_on_gpu=train_on_gpu)
 
-            # Compute the discriminator losses on fake images 
-            # using flipped labels!
-            D_fake = D(fake_images)
-            # Smooth & swap labels
-            labels = get_labels(D_fake.size(0), True, swap_prob=0.03, noise_norm=0.1)
-            # move labels to GPU if available     
-            if train_on_gpu:
-                labels = labels.cuda()
-            # calculate loss
-            g_loss = criterion(D_fake.squeeze(), labels)
+            # Get discrimminator output for fake images
+            z = get_noise((batch_size, fixed_z.size(1)), train_on_gpu)
+            D_fake = D(G(z)).squeeze()
 
-            # perform backprop
+            # Compute loss
+            g_loss = get_generator_loss(D_fake, criterion, real_target, D_real, loss_type=loss_type)
+
+            # Backprop
             g_loss.backward()
             g_optimizer.step()
 
-        # Log stats
-        info = dict(d_loss=d_loss.item(), g_loss=g_loss.item())
+        # Tensorboard monitoring
         current_iter = (starting_epoch + epoch) * len(data_loader) + batch_i
         if tb_logger is not None:
-            tb_logger.add_scalars(log_name, info, current_iter)
-            # for name, param in D.named_parameters():
-            #     if param.requires_grad and "bias" not in name:
-            #         tb_logger.add_histogram(f"D.layer{name}", param.clone().cpu().data.numpy(), current_iter)
-            # for name, param in G.named_parameters():
-            #     if param.requires_grad and "bias" not in name:
-            #         tb_logger.add_histogram(f"G.layer{name}", param.clone().cpu().data.numpy(), current_iter)
+            # Network losses
+            tb_logger.add_scalars(f"{loss_type}_loss",
+                                  dict(d_loss=d_loss.item(), g_loss=g_loss.item()),
+                                  current_iter)
+            # Histograms of parameters value and gradients
+            for name, param in D.named_parameters():
+                if param.requires_grad and "bias" not in name:
+                    tag = f"D/{name.replace('.', '/')}"
+                    tb_logger.add_histogram(f"{tag}/value", param.cpu(), current_iter)
+                    tb_logger.add_histogram(f"{tag}/grad", param.grad.cpu(), current_iter)
+            for name, param in G.named_parameters():
+                if param.requires_grad and "bias" not in name:
+                    tag = f"G/{name.replace('.', '/')}"
+                    tb_logger.add_histogram(f"{tag}/value", param.cpu(), current_iter)
+                    tb_logger.add_histogram(f"{tag}/grad", param.grad.cpu(), current_iter)
 
-
-        # print discriminator and generator loss
+        # Console printing
         if (epoch + 1) % log_every == 0:
             print('Epoch [{:5d}/{:5d}] | d_loss: {:6.4f} | g_loss: {:6.4f}'.format(
                   epoch + 1, n_epochs, d_loss.item(), g_loss.item()))
 
-
-        # Display samples
+        # Sample displaying
         if (epoch + 1) % sample_print_freq == 0:
-            G.eval()  # for generating samples
+            # Generate samples
+            G.eval()
             samples_z = G(fixed_z)
-            G.train()  # back to training mode
+            G.train()
+            # Console display
             print_samples(samples_z, img_size=img_size)
             plt.tight_layout()
             plt.savefig(os.path.join(output_folder, 'samples', f"stage{img_size}_epoch{starting_epoch + epoch + 1}.png"),
                         transparent=True)
             plt.show()
-            # Images
-            # if tb_logger:
-                # x = torchvision.utils.make_grid(samples_z.clone().cpu(), normalize=True, scale_each=True)
-                # tb_logger.add_image('gen_images', x, current_iter)
-                # tb_logger.add_images('gen_images', samples_z.cpu().detach(), current_iter)
+            # Tensorboard display
+            if tb_logger is not None:
+                x = torchvision.utils.make_grid(samples_z.cpu(), normalize=True, scale_each=True)
+                tb_logger.add_image(f"samples", x, current_iter)
+            # Gradient flow
             plt.figure(figsize=(12, 7))
             plt.subplot(121)
             print_gradflow(D.named_parameters(), "Discriminator gradient flow")
