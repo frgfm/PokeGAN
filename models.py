@@ -36,7 +36,7 @@ def downsampler(in_channels, out_channels, kernel_size=3, stride=2, padding=1,
 class Discriminator(nn.Module):
 
     def __init__(self, conv_channels, input_size=32, kernel_size=3, stride=2,
-                 norm_layer=None, norm_fn=None, drop_rate=0, init_weights=None):
+                 norm_layer=None, norm_fn=None, drop_rate=0, weight_initializer=None):
         """
         Initialize the Discriminator Module
         :param conv_dim: The depth of the first convolutional layer
@@ -65,8 +65,8 @@ class Discriminator(nn.Module):
         self.fc = nn.Linear(current_size ** 2 * out_channels, 1)
 
         # Init weights
-        if init_weights is not None:
-            self.apply(init_weights)
+        if weight_initializer is not None:
+            self.apply(weight_initializer)
 
     def freeze_layers(self, nb_layers=0):
 
@@ -115,7 +115,7 @@ def upsampler(in_channels, out_channels, kernel_size=3, stride=2, padding=1,
 class Generator(nn.Module):
 
     def __init__(self, z_size, conv_channels, output_size=32, kernel_size=3, stride=2,
-                 norm_layer=None, norm_fn=None, drop_rate=0, init_weights=None):
+                 norm_layer=None, norm_fn=None, drop_rate=0, weight_initializer=None):
         """
         Initialize the Generator Module
         :param z_size: The length of the input latent vector, z
@@ -148,8 +148,8 @@ class Generator(nn.Module):
         self.upblock = nn.Sequential(layers_dict)
 
         # Init weights
-        if init_weights is not None:
-            self.apply(init_weights)
+        if weight_initializer is not None:
+            self.apply(weight_initializer)
 
     def freeze_layers(self, nb_layers=0):
 
