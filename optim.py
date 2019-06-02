@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 
+IMPLEMENTED_LOSSES = ['sgan', 'rgan', 'ragan']
 
 
 def get_labels(batch_size, real_label=True, swap_prob=0.03, noise_norm=0.1, train_on_gpu=True):
@@ -54,3 +55,36 @@ def normal_initialization(m, mean=0, std=0.2):
     # Apply initial weights to convolutional and linear layers
     if (classname.find('Conv') != -1 or classname.find('Linear') != -1):
         torch.nn.init.normal_(m.weight.data, mean, std)
+
+
+def get_discriminator_loss(real_pred, fake_pred, criterion, real_target,
+                           fake_target=None, loss_type='sgan'):
+
+    if loss_type not in IMPLEMENTED_LOSSES:
+        raise NotImplementedError(f"Loss type should be in {IMPLEMENTED_LOSSES}")
+
+    if loss_type == 'sgan':
+        loss = criterion(real_pred, real_target) + criterion(fake_pred, fake_target)
+    elif loss_type == 'rgan':
+        loss = criterion(real_pred - fake_pred, real_target)
+    elif loss_type == 'ragan':
+        loss = (torch.mean((real_pred - torch.mean(fake_pred) - real_target) ** 2) +
+                torch.mean((fake_pred - torch.mean(real_pred) + real_target) ** 2)) / 2
+
+    return loss
+
+
+def get_generator_loss(fake_pred, criterion, real_target, real_pred=None, loss_type='sgan'):
+
+    if loss_type not in IMPLEMENTED_LOSSES:
+        raise NotImplementedError(f"Loss type should be in {IMPLEMENTED_LOSSES}")
+
+    if loss_type == 'sgan':
+        loss = criterion(fake_pred, real_target)
+    elif loss_type == 'rgan':
+        loss = criterion(fake_pred - real_pred, real_target)
+    elif loss_type == 'ragan':
+        loss = (torch.mean((real_pred - torch.mean(fake_pred) + real_target) ** 2) +
+                torch.mean((fake_pred - torch.mean(real_pred) - real_target) ** 2)) / 2
+
+    return loss
