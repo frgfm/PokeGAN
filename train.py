@@ -1,15 +1,17 @@
 import os
 import torch
+import torch.optim as optim
 import numpy as np
-from preprocessing import scale
 import matplotlib.pyplot as plt
 import torchvision
 
+from models import Discriminator, Generator
+from preprocessing import scale, get_dataloader
 from optim import get_labels, get_noise, get_discriminator_loss, get_generator_loss
 from utils import print_samples, print_gradflow
 
 
-def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n_epochs, train_on_gpu=True,
+def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n_epochs, train_on_gpu=True, loss_type='sgan',
               tb_logger=None, log_every=10, output_folder='training', sample_print_freq=100, starting_epoch=0):
     '''Trains adversarial networks for some number of epochs
        param, D: the discriminator network
@@ -132,6 +134,82 @@ def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, criterion, n
             torch.save(G.state_dict(), os.path.join(output_folder, 'model_states', f"G_stage{img_size}_epoch{starting_epoch + epoch + 1}.pth"))
 
 
-def train_ProGAN():
+def train_ProGAN(min_scale, max_scale, lr_cycles,
+                 batch_size, data_dir,
+                 latent_feature_size, d_dict, g_dict,
+                 train_on_gpu, g_lr_scaling_factor, betas, loss_type, criterion,
+                 sample_size, logger, output_folder):
 
-    return 0
+    nb_stages = int(np.log2(max_scale / min_scale)) + 1
+    img_size = min_scale
+
+    if len(lr_cycles) not in [1, nb_stages]:
+        raise AssertionError("You need a cycle definition for each progressive stage or a single cycle for all stages")
+
+    fixed_z = get_noise((sample_size, g_dict.get('z_size')))
+    tot_epochs = 0
+
+    for stage_idx in range(nb_stages):
+        poke_loader = get_dataloader(batch_size, img_size, data_dir=data_dir)
+
+        # Check number of sampling operations
+        d_depth = int(np.log2(img_size / latent_feature_size))
+        g_depth = d_depth + int(np.log2(d_dict.get('conv_dim') / g_dict.get('conv_dim')))
+        # Recreate the nets
+        d_channels = [3] + [2 ** idx * d_dict.get('conv_dim') for idx in range(d_depth)]
+        D = Discriminator(d_channels, img_size, d_dict.get('conv_ksize'), d_dict.get('conv_stride'),
+                          norm_layer=d_dict.get('norm_layer'), norm_fn=d_dict.get('norm_fn'), drop_rate=d_dict.get('drop_rate'),
+                          weight_initializer=d_dict.get('weight_initializer'))
+
+        g_channels = [2 ** (g_depth - 1 - idx) * g_dict.get('conv_dim') for idx in range(g_depth)] + [3]
+        G = Generator(g_dict.get('z_size'), g_channels, img_size, g_dict.get('conv_ksize'), g_dict.get('conv_stride'),
+                      norm_layer=g_dict.get('norm_layer'), norm_fn=g_dict.get('norm_fn'), drop_rate=g_dict.get('drop_rate'),
+                      weight_initializer=g_dict.get('weight_initializer'))
+
+        # Parameter loading & freezing
+        if stage_idx > 0:
+            # Load stage parameters & freeze previously trained layers
+            if d_dict.get('norm_fn') is None:
+                D.load_state_dict(d_state_dict, strict=False)
+            else:  # state_loading for spectral norm
+                tmp_dict = D.state_dict()
+                tmp_dict.update({k: v for k, v in d_state_dict.items() if k in tmp_dict})
+                D.load_state_dict(tmp_dict)
+            D.freeze_layers(d_depth - 1)
+
+            if g_dict.get('norm_fn') is None:
+                G.load_state_dict(g_state_dict, strict=False)
+            else:  # state_loading for spectral norm
+                tmp_dict = G.state_dict()
+                tmp_dict.update({k: v for k, v in d_state_dict.items() if k in tmp_dict})
+                G.load_state_dict(tmp_dict)
+            G.freeze_layers(g_depth - 1)
+
+        # Move models to GPU
+        if train_on_gpu:
+            D.cuda()
+            G.cuda()
+
+        # Train the stage
+        print(f"======================\nStage {img_size}x{img_size} ({stage_idx+1}/{nb_stages})\n======================")
+        stage_cycle_idx = stage_idx if len(lr_cycles) > 1 else 0
+        for cycle_idx, cycle_settings in enumerate(lr_cycles[stage_cycle_idx]):
+            print(f"Cycle ({cycle_idx+1}/{len(lr_cycles[stage_cycle_idx])}) - {cycle_settings}")
+            d_optimizer = optim.Adam(D.parameters(), cycle_settings.get('lr'), betas)
+            g_optimizer = optim.Adam(G.parameters(), g_lr_scaling_factor * cycle_settings.get('lr'), betas)
+            train_GAN(D, d_optimizer, G, g_optimizer, poke_loader, fixed_z,
+                      criterion, cycle_settings.get('nb_epochs'), train_on_gpu,
+                      loss_type, logger, log_every=10, output_folder=output_folder,
+                      sample_print_freq=100, starting_epoch=tot_epochs)
+            tot_epochs += cycle_settings.get('nb_epochs')
+            # Model state saving (keep only sampling layers)
+            d_state_dict = {p_name: p for p_name, p in D.state_dict().items()
+                            if p_name.split('.')[0] == 'downblock'}
+            g_state_dict = {p_name: p for p_name, p in G.state_dict().items()
+                            if p_name.split('.')[0] == 'upblock'}
+
+        img_size *= 2
+
+    logger.close()
+
+    return D, G
