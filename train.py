@@ -49,7 +49,7 @@ def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, n_epochs, tr
             D_real = D(real_images).squeeze()
             # Generate fake images
             z = get_noise((batch_size, fixed_z.size(1)), train_on_gpu)
-            D_fake = D(G(z)).detach().squeeze()
+            D_fake = D(G(z)).squeeze()
 
             # Compute loss
             d_loss = get_discriminator_loss(D_real, D_fake, real_target, fake_target, loss_type=loss_type)
@@ -64,8 +64,6 @@ def train_GAN(D, d_optimizer, G, g_optimizer, data_loader, fixed_z, n_epochs, tr
 
             g_optimizer.zero_grad()
 
-            # Get discrimminator output for real and fake images
-            D_real = D(real_images).detach().squeeze()
             # Get discrimminator output for fake images
             z = get_noise((batch_size, fixed_z.size(1)), train_on_gpu)
             D_fake = D(G(z)).squeeze()
