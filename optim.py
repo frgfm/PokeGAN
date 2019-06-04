@@ -1,8 +1,8 @@
 import torch
-from torch.nn import BCEWithLogitsLoss
+from torch.nn import MSELoss, BCEWithLogitsLoss
 import numpy as np
 
-IMPLEMENTED_LOSSES = ['sgan', 'rgan', 'ragan']
+IMPLEMENTED_LOSSES = ['sgan', 'lsgan', 'wgan', 'rgan', 'ragan']
 
 
 def get_labels(batch_size, real_label=True, swap_prob=0.03, noise_norm=0.1, train_on_gpu=True):
@@ -68,6 +68,12 @@ def get_discriminator_loss(real_pred, fake_pred, real_target,
         adversarial_loss = BCEWithLogitsLoss()
         loss = 0.5 * (adversarial_loss(real_pred, real_target) +
                       adversarial_loss(fake_pred, fake_target))
+    elif loss_type == 'lsgan':
+        adversarial_loss = MSELoss()
+        loss = 0.5 * (adversarial_loss(real_pred, real_target) +
+                      adversarial_loss(fake_pred, fake_target))
+    elif loss_type == 'wgan':
+        loss = fake_pred.mean() - real_pred.mean()
     elif loss_type == 'rgan':
         adversarial_loss = BCEWithLogitsLoss()
         loss = 0.5 * (adversarial_loss(real_pred - fake_pred, real_target) +
@@ -80,7 +86,7 @@ def get_discriminator_loss(real_pred, fake_pred, real_target,
     return loss
 
 
-def get_generator_loss(fake_pred, criterion, real_target, real_pred=None, loss_type='sgan'):
+def get_generator_loss(fake_pred, real_target, real_pred=None, loss_type='sgan'):
 
     if loss_type not in IMPLEMENTED_LOSSES:
         raise NotImplementedError(f"Loss type should be in {IMPLEMENTED_LOSSES}")
@@ -88,6 +94,11 @@ def get_generator_loss(fake_pred, criterion, real_target, real_pred=None, loss_t
     if loss_type == 'sgan':
         adversarial_loss = BCEWithLogitsLoss()
         loss = adversarial_loss(fake_pred, real_target)
+    elif loss_type == 'lsgan':
+        adversarial_loss = MSELoss()
+        loss = adversarial_loss(fake_pred, real_target)
+    elif loss_type == 'wgan':
+        loss = -fake_pred.mean()
     elif loss_type == 'rgan':
         adversarial_loss = BCEWithLogitsLoss()
         loss = adversarial_loss(fake_pred - real_pred, real_target)
