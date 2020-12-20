@@ -43,8 +43,8 @@ def main(args):
     # Dynamically define models from image size and latent space size
     d_conv_dim, g_conv_dim = 32, 32
     d_depth = int(np.log2(args.size / args.latent_size))
-    d_chans = [3] + [d_conv_dim * 2 ** idx for idx in range(d_depth + 1)]
-    g_chans = [g_conv_dim * 2 ** idx for idx in range(d_depth + 1)][::-1] + [3]
+    d_chans = [3] + [d_conv_dim * 2 ** idx for idx in range(d_depth)]
+    g_chans = [g_conv_dim * 2 ** idx for idx in range(d_depth)][::-1] + [3]
     # Recreate the nets
     D = Discriminator(args.size, d_chans, 3, dropout=args.dropout).cuda()
     G = Generator(args.z_size, args.size, g_chans, 5, dropout=args.dropout).cuda()
@@ -52,7 +52,7 @@ def main(args):
     print(G)
 
     # Train our GAN
-    gan_trainer = GANTrainer(D, G, args.z_size, train_loader)
+    gan_trainer = GANTrainer(D, G, args.size, args.z_size, train_loader)
     gan_trainer.fit_n_epochs(args.epochs, args.lr, args.weight_decay, args.label_smoothing, args.noise, args.swap)
 
 
