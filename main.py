@@ -54,6 +54,9 @@ def main(args):
     # Train our GAN
     gan_trainer = GANTrainer(D, G, args.size, args.z_size, train_loader)
     gan_trainer.fit_n_epochs(args.epochs, args.lr, args.weight_decay, args.label_smoothing, args.noise, args.swap)
+    torch.save(dict(discriminator=gan_trainer.discriminator.state_dict(),
+                    generator=gan_trainer.generator.state_dict()),
+               args.output_file)
 
 
 def parse_args():
@@ -78,6 +81,7 @@ def parse_args():
     parser.add_argument('-b', '--batch-size', default=32, type=int, help='batch size')
     parser.add_argument('--epochs', default=400, type=int, help='number of total epochs to run')
     parser.add_argument('-j', '--workers', default=16, type=int, help='number of data loading workers')
+    parser.add_argument('--output-file', default='./gan.pth', help='path where to save')
 
     args = parser.parse_args()
 

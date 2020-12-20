@@ -84,6 +84,10 @@ def main(args):
         # Display samples
         gan_trainer.display_samples(fixed_z)
 
+    torch.save(dict(discriminator=gan_trainer.discriminator.state_dict(),
+                    generator=gan_trainer.generator.state_dict()),
+               args.output_file)
+
 
 def parse_args():
     import argparse
@@ -108,6 +112,7 @@ def parse_args():
     parser.add_argument('-b', '--batch-size', default=32, type=int, help='batch size')
     parser.add_argument('--epochs', default=400, type=int, help='number of total epochs to run')
     parser.add_argument('-j', '--workers', default=16, type=int, help='number of data loading workers')
+    parser.add_argument('--output-file', default='./gan.pth', help='path where to save')
 
     args = parser.parse_args()
 
