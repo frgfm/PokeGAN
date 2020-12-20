@@ -32,7 +32,7 @@ def main(args):
 
     for stage_idx, img_size in enumerate(img_sizes):
 
-        print(f"======================\nStage {img_size}x{img_size} ({stage_idx+1}/{num_stages})\n======================")
+        print(f"====================\nStage {img_size}x{img_size} ({stage_idx+1}/{num_stages})\n====================")
 
         # Define transforms
         transform = Compose([
@@ -76,7 +76,8 @@ def main(args):
 
         # Train our GAN
         gan_trainer = GANTrainer(discriminator, generator, img_size, args.z_size, train_loader)
-        gan_trainer.fit_n_epochs(args.epochs, args.lr, args.weight_decay, args.label_smoothing, args.noise, args.swap, False)
+        gan_trainer.fit_n_epochs(args.epochs, args.lr, args.weight_decay,
+                                 args.label_smoothing, args.noise, args.swap, False)
         # Save state dicts
         d_state_dicts = [block.state_dict() for block in gan_trainer.discriminator[0]]
         g_state_dicts = [block.state_dict() for block in gan_trainer.generator[-1]]

@@ -55,7 +55,7 @@ class UnFlatten(nn.Module):
 class Generator(nn.Sequential):
     def __init__(
         self,
-        latent_size: int,
+        z_size: int,
         img_size: int,
         conv_chans: List[int],
         k_size: int,
@@ -72,7 +72,7 @@ class Generator(nn.Sequential):
         for in_chan, out_chan in zip(conv_chans[:-1], conv_chans[1:]):
             _block: List[nn.Module] = []
             _block.append(nn.ConvTranspose2d(in_chan, out_chan, k_size, stride=2, padding=k_size // 2,
-                                              output_padding=1, bias=(not bn) and (_idx < len(conv_chans) - 1)))
+                                             output_padding=1, bias=(not bn) and (_idx < len(conv_chans) - 1)))
             if bn and _idx < len(conv_chans) - 1:
                 _block.append(nn.BatchNorm2d(out_chan))
             if _idx == len(conv_chans) - 1:
@@ -85,7 +85,7 @@ class Generator(nn.Sequential):
             _idx += 1
 
         super().__init__(
-            nn.Linear(latent_size, conv_chans[0] * _reduced_size ** 2),
+            nn.Linear(z_size, conv_chans[0] * _reduced_size ** 2),
             UnFlatten((conv_chans[0], _reduced_size, _reduced_size)),
             nn.Sequential(*_layers),
         )
