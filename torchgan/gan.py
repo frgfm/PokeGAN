@@ -7,6 +7,8 @@ from typing import Tuple
 from fastprogress import master_bar, progress_bar
 from fastprogress.fastprogress import ConsoleMasterBar
 
+from .utils import print_samples
+
 
 __all__ = ['GANTrainer']
 
@@ -18,12 +20,14 @@ class GANTrainer:
         self,
         discriminator: nn.Module,
         generator: nn.Module,
+        img_size: int,
         z_size: int,
         train_loader: DataLoader,
         loss_type: str = 'sgan'
     ) -> None:
         self.discriminator: nn.Module = discriminator
         self.generator: nn.Module = generator
+        self.img_size: int = img_size
         self.z_size: int = z_size
         self.train_loader: DataLoader = train_loader
         self.loss_type = loss_type
@@ -35,10 +39,13 @@ class GANTrainer:
         wd: float = 0.,
         label_smoothing: float = 0.1,
         noise: float = 0.1,
-        swap_prob: float = 0.03
+        swap_prob: float = 0.03,
+        display_samples: bool = True,
     ) -> None:
-        d_optimizer = Adam(self.discriminator.parameters(), lr, betas=(0.5, 0.999), eps=1e-6, weight_decay=wd)
-        g_optimizer = Adam(self.generator.parameters(), lr, betas=(0.5, 0.999), eps=1e-6, weight_decay=wd)
+        d_optimizer = Adam([p for p in self.discriminator.parameters() if p.requires_grad], lr,
+                           betas=(0.5, 0.999), eps=1e-6, weight_decay=wd)
+        g_optimizer = Adam([p for p in self.generator.parameters() if p.requires_grad], lr,
+                           betas=(0.5, 0.999), eps=1e-6, weight_decay=wd)
 
         # keep track of loss and generated, "fake" samples
         fixed_z = torch.randn((16, self.z_size)).cuda()
@@ -50,12 +57,15 @@ class GANTrainer:
             mb.write(f"Epoch {epoch + 1}/{num_epochs} - D loss: {d_loss.item():.4} | G loss: {g_loss.item():.4}")
 
             # Generate samples
-            if (epoch + 1) % 100 == 0:
-                with torch.no_grad():
-                    self.generator.eval()
-                    samples_z = self.generator(fixed_z)
-                    # Console display
-                    print_samples(samples_z, img_size=img_size)
+            if display_samples and ((epoch + 1) % 100 == 0):
+                self.display_samples(fixed_z)
+
+    @torch.no_grad()
+    def display_samples(self, fixed_z: Tensor) -> None:
+        self.generator.eval()
+        samples_z = self.generator(fixed_z)
+        # Console display
+        print_samples(samples_z, img_size=self.img_size)
 
     def fit_one_epoch(
         self,
@@ -114,7 +124,7 @@ class GANTrainer:
             g_optimizer.step()
 
             # Console printing
-            pb.comment = f"Discriminator loss: {d_loss.item():.4} | Generator loss: {g_loss.item():.4}"
+            pb.comment = f"D loss: {d_loss.item():.4} | G loss: {g_loss.item():.4}"
 
         return d_loss, g_loss
 
@@ -145,7 +155,7 @@ def discriminator_loss(
     real_pred: Tensor,
     fake_pred: Tensor,
     real_target: Tensor,
-    fake_target: Optional[Tensor] = None,
+    fake_target: Tensor,
     loss_type: str = 'sgan'
 ) -> Tensor:
 
@@ -153,23 +163,19 @@ def discriminator_loss(
         raise NotImplementedError(f"Loss type should be in {IMPLEMENTED_LOSSES}")
 
     if loss_type == 'sgan':
-        adversarial_loss = F.binary_cross_entropy_with_logits
-        loss = 0.5 * (adversarial_loss(real_pred, real_target) +
-                      adversarial_loss(fake_pred, fake_target))
+        loss = 0.5 * (F.binary_cross_entropy_with_logits(real_pred, real_target) +
+                      F.binary_cross_entropy_with_logits(fake_pred, fake_target))
     elif loss_type == 'lsgan':
-        adversarial_loss = F.mse_loss
-        loss = 0.5 * (adversarial_loss(real_pred, real_target) +
-                      adversarial_loss(fake_pred, fake_target))
+        loss = 0.5 * (F.mse_loss(real_pred, real_target) +
+                      F.mse_loss(fake_pred, fake_target))
     elif loss_type == 'wgan':
         loss = fake_pred.mean() - real_pred.mean()
     elif loss_type == 'rgan':
-        adversarial_loss = F.binary_cross_entropy_with_logits
-        loss = 0.5 * (adversarial_loss(real_pred - fake_pred, real_target) +
-                      adversarial_loss(fake_pred - real_pred, fake_target))
+        loss = 0.5 * (F.binary_cross_entropy_with_logits(real_pred - fake_pred, real_target) +
+                      F.binary_cross_entropy_with_logits(fake_pred - real_pred, fake_target))
     elif loss_type == 'ragan':
-        adversarial_loss = F.binary_cross_entropy_with_logits
-        loss = 0.5 * (adversarial_loss(real_pred - fake_pred.mean(), real_target) +
-                      adversarial_loss(fake_pred - real_pred.mean(), fake_target))
+        loss = 0.5 * (F.binary_cross_entropy_with_logits(real_pred - fake_pred.mean(), real_target) +
+                      F.binary_cross_entropy_with_logits(fake_pred - real_pred.mean(), fake_target))
 
     return loss
 
@@ -177,7 +183,7 @@ def discriminator_loss(
 def generator_loss(
     fake_pred: Tensor,
     real_target: Tensor,
-    real_pred: Optional[Tensor] = None,
+    real_pred: Tensor,
     loss_type: str = 'sgan'
 ) -> Tensor:
 
@@ -185,18 +191,14 @@ def generator_loss(
         raise NotImplementedError(f"Loss type should be in {IMPLEMENTED_LOSSES}")
 
     if loss_type == 'sgan':
-        adversarial_loss = F.binary_cross_entropy_with_logits
-        loss = adversarial_loss(fake_pred, real_target)
+        loss = F.binary_cross_entropy_with_logits(fake_pred, real_target)
     elif loss_type == 'lsgan':
-        adversarial_loss = F.mse_loss
-        loss = adversarial_loss(fake_pred, real_target)
+        loss = F.mse_loss(fake_pred, real_target)
     elif loss_type == 'wgan':
         loss = -fake_pred.mean()
     elif loss_type == 'rgan':
-        adversarial_loss = F.binary_cross_entropy_with_logits
-        loss = adversarial_loss(fake_pred - real_pred, real_target)
+        loss = F.binary_cross_entropy_with_logits(fake_pred - real_pred, real_target)
     elif loss_type == 'ragan':
-        adversarial_loss = F.binary_cross_entropy_with_logits
-        loss = adversarial_loss(fake_pred - real_pred.mean(), real_target)
+        loss = F.binary_cross_entropy_with_logits(fake_pred - real_pred.mean(), real_target)
 
     return loss
