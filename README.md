@@ -1,6 +1,8 @@
 # PokeGAN
 
-This repository is an ongoing implementation of shallow GAN architectures to generate Pokemons. The implementation is in PyTorch with tensorboard support for visualization.
+[![License](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE) ![Build Status](https://github.com/frgfm/PokeGAN/workflows/python-package/badge.svg) [![codecov](https://codecov.io/gh/frgfm/PokeGAN/branch/master/graph/badge.svg)](https://codecov.io/gh/frgfm/Holocron) 
+
+This repository is an ongoing implementation of shallow GAN architectures to generate Pokemons using PyTorch.
 
 
 
@@ -8,60 +10,85 @@ This repository is an ongoing implementation of shallow GAN architectures to gen
 
 
 
-## Installation
 
-This project was developed in Python 3.7 with PyTorch 1.1. If you have a previous version of PyTorch, please consider switching `torch.utils.tensorboard` dependency to [tensorboardX](https://github.com/lanpa/tensorboardX).
+
+## Table of Contents
+
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+- [Usage](#usage)
+- [Contributing](#contributing)
+- [Credits](#credits)
+- [License](#license)
+
+
+
+## Getting started
+
+### Prerequisites
+
+- Python 3.6 (or more recent)
+- [pip](https://pip.pypa.io/en/stable/)
+- Pokemon dataset from [Kaggle](https://www.kaggle.com/kvpratama/pokemon-images-dataset), or a static fallback provided by this [repo](https://github.com/frgfm/PokeGAN/releases/download/v0.1.0-data/pokemon_jpg.tar.gz). *Please note that if you use the original Kaggle version, it's better to switch the JPG images to PNG format (to avoid transparency handling later on)*
+
+### Installation
+
+You can install the project requirement as follows:
 
 ```bash
 git clone https://github.com/frgfm/PokeGAN.git
-cd PokeGAN
-pip install -r requirements.txt
-mkdir data logs
+pip install -r PokeGAN/requirements.txt
 ```
 
-Download the Kaggle dataset including all Pokemons from [here](https://www.kaggle.com/kvpratama/pokemon-images-dataset). And now unzip it using the following commands:
+or install it as a package:
 
 ```bash
-mv ~/Downloads/pokemon-images-dataset.zip .
-unzip pokemon-images-dataset.zip
-unzip pokemon.zip
-rm pokemon.zip pokemon-images-dataset.zip
-```
-
-The image are in PNG format, better switch them to JPG (to avoid transparency handling later on):
-
-```bash
-python3 -c "from utils import convert_to_png; convert_to_png('pokemon', 'data/pokemon')"
-rm -r pokemon
+pip install git+https://github.com/frgfm/PokeGAN.git
 ```
 
 
 
 ## Usage
 
-How to train your model
+There are two available training script: `main.py` for classic DCGAN, and `progan.py` for ProGAN training. You can use the `--help` flag to get more advanced usage instructions.
 
-### Jupyter notebook
+```shell
+usage: main.py [-h] [--size SIZE] [--device DEVICE] [--lr LR] [--dropout DROPOUT] [--z-size Z_SIZE]
+               [--latent-size LATENT_SIZE] [--wd WEIGHT_DECAY] [--ls LABEL_SMOOTHING]
+               [--noise NOISE] [--swap SWAP] [-b BATCH_SIZE] [--epochs EPOCHS] [-j WORKERS]
+               data_path
 
-Run your jupyter notebook
+Pokemon GAN Training
 
-``` bash
-jupyter notebook
+positional arguments:
+  data_path             path to dataset folder
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --size SIZE           Image size to produce (default: 64)
+  --device DEVICE       device (default: 0)
+  --lr LR               initial learning rate (default: 0.001)
+  --dropout DROPOUT     dropout rate (default: 0.3)
+  --z-size Z_SIZE       number of features fed to the generator (default: 96)
+  --latent-size LATENT_SIZE
+                        latent feature map size (default: 4)
+  --wd WEIGHT_DECAY, --weight-decay WEIGHT_DECAY
+                        weight decay (default: 0)
+  --ls LABEL_SMOOTHING, --label-smoothing LABEL_SMOOTHING
+                        label smoothing (default: 0.1)
+  --noise NOISE         Norm of the noise added to labels (default: 0.1)
+  --swap SWAP           Probability of swapping labels (default: 0.03)
+  -b BATCH_SIZE, --batch-size BATCH_SIZE
+                        batch size (default: 32)
+  --epochs EPOCHS       number of total epochs to run (default: 400)
+  -j WORKERS, --workers WORKERS
+                        number of data loading workers (default: 16)
+  --output-file OUTPUT_FILE
+                        path where to save (default: ./gan.pth)
 ```
 
-and navigate to `poke_progan.ipynb` if you wish to train the networks by yourself.
 
-### Running the tensorboard interface
-
-Start the tensorboard server locally to visualize your training losses:
-
-```bash
-tensorboard --logdir=logs
-```
-
-Then open a new tab in your browser and navigate to `<YOUR_COMPUTER_NAME>:6006`  to monitor your training.
-
-![tensorboard_viz](static/images/pokegan_tb.png)
 
 
 
@@ -79,7 +106,7 @@ Tried InstanceNorm rather than BatchNorm but the latter proved to be more effect
 
 ### Training scheme
 
-![progan_scheme](static/images/progan_scheme.png)
+![progan_scheme](https://paperswithcode.com/media/methods/Screen_Shot_2020-06-28_at_11.57.45_PM_OvA9EvH.png)
 
 *Source: Progressive Growing of GANs for improved quality, stability, and variation, ICLR 2018*
 
@@ -108,7 +135,7 @@ And other tricks to be implemented soon:
 
 
 
-## Results
+### Results
 
 #### Stage 1 (16x16 images)
 
@@ -146,7 +173,7 @@ Gradient flow
 
 
 
-## Submitting a request / Reporting an issue
+## Contributing
 
 Regarding issues, use the following format for the title:
 
@@ -158,7 +185,7 @@ Example:
 
 
 
-## References
+## Credits
 
 - DCGAN: [paper](https://arxiv.org/abs/1511.06434)
 - ProGAN: [paper](https://arxiv.org/abs/1710.10196)
@@ -167,3 +194,9 @@ Example:
 - Consistency term: [paper](https://arxiv.org/abs/1803.01541) ([implementation](https://github.com/pYtoner/CT-GAN))
 - Spectral normalization: [paper](https://arxiv.org/abs/1802.05957) ([implementation](https://pytorch.org/docs/stable/_modules/torch/nn/utils/spectral_norm.html))
 - RaGAN: [paper](https://arxiv.org/abs/1807.00734)
+
+
+
+## License
+
+Distributed under the MIT License. See `LICENSE` for more information.
